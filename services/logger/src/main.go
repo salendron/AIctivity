@@ -52,7 +52,7 @@ import (
 
 func main() {
 	var storage SQLiteStorage
-	storage.Initialize("./test.db")
+	storage.Initialize(os.Getenv("SQLDBPATH"))
 
 	var api API
 	api.SetStorage(&storage)

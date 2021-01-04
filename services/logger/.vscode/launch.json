@@ -11,7 +11,8 @@
             "request": "launch",
             "program": "${fileDirname}",
             "env": {
-                "PORT":"9000"
+                "PORT":"9000",
+                "SQLDBPATH":"/data/aictivity.db"
             },
             "args": []
         }
