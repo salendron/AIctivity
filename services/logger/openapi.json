@@ -74,26 +74,23 @@
         "type": "object",
         "properties": {
           "aX": {
-            "type": "integer"
+            "type": "number"
           },
           "aY": {
-            "type": "integer"
+            "type": "number"
           },
           "aZ": {
-            "type": "integer"
+            "type": "number"
           },
           "gX": {
-            "type": "integer"
+            "type": "number"
           },
           "gY": {
-            "type": "integer"
+            "type": "number"
           },
           "gZ": {
-            "type": "integer"
-          },
-          "temp": {
             "type": "number"
-          } 
+          }
         }
       },"Error": {
         "title": "Error",

@@ -1,11 +1,14 @@
-# TODO
+# AIctivity Data Logger Service
+This service is used to save data from the Arduino Nano 33 IoT to a SQLite database. It exposes a single Websocket endpoint at /record.
 
-# Build OpenAPI server
- ./oapi-codegen /home/ubuntu/git/AIctivity/services/logger/openapi.json > /home/ubuntu/git/AIctivity/services/logger/src/server.gen.go
+## Docker deployment
+### Build Container
+```
+docker build --tag aictivity-logger:1.0 .
+```
 
-# Testcall
- curl --header "Content-Type: application/json" --request POST --data '{"aX":1, "aY":2, "aZ":3, "gX":4, "gY":5, "gZ":6, "temp":1.2}' http://localhost:9000/data
-
-
- # Desploy container
- docker run -d -p 9000:9000 --name aictivity-logger -e PORT='9000' -e SQLDBPATH='/data' -v /var/run/docker.sock:/var/run/docker.sock --restart unless-stopped --mount type=bind,source=/home/pi/data,target=/data aictivitiy-logger:1.0
+### Run Container
+This command starts the service on port 9000 and mount local directory /home/pi/data to /data in the container. It will save the SQLite Database to /date/aictivity.db.
+```
+docker run -d -p 9000:9000 --name aictivity-logger -e PORT='9000' -e SQLDBPATH='/data/aictivity.db' -v /var/run/docker.sock:/var/run/docker.sock --restart unless-stopped --mount type=bind,source=/home/pi/data,target=/data aictivity-logger:1.0
+```

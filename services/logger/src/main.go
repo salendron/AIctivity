@@ -1,15 +1,13 @@
 /*
-LOGGER SERVICE
-
-This service is used to simply record the data gathered by the arduino hardware on
-the user's body to a SQLite Database.
-This Data will later on be used to train our model.
+AIctivity Data Logger Service
+This service is used to save data from the Arduino Nano 33 IoT to a SQLite
+database. It exposes a single Websocket endpoint at /record.
 
 ###################################################################################
 
 main.go
-This is the main entrypoint of the service. It starts the service and
-starts the reverse proxy.
+This is the main entrypoint of the service. It starts the service and handles
+incoming data via a websocket.
 
 ###################################################################################
 
@@ -34,31 +32,84 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
- ./oapi-codegen /home/ubuntu/git/AIctivity/services/logger/openapi.json > /home/ubuntu/git/AIctivity/services/logger/src/server.gen.go
-
-
- curl --header "Content-Type: application/json" --request POST --data '{"aX":1, "aY":2, "aZ":3, "gX":4, "gY":5, "gZ":6, "temp":1.2}' http://localhost:9000/data
 */
 
 package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"os"
+	"strconv"
+	"strings"
 
-	"github.com/labstack/echo/v4"
+	"github.com/gorilla/websocket"
 )
 
+var upgrader = websocket.Upgrader{}
+
+func stringToFloat(s string) float32 {
+	if f, err := strconv.ParseFloat(s, 32); err == nil {
+		return float32(f)
+	}
+	log.Printf("Could not parse %v to float\n", s)
+	return 0
+}
+
+func save(w http.ResponseWriter, r *http.Request) {
+	c, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Print("upgrade:", err)
+		return
+	}
+	defer c.Close()
+	for {
+		mt, message, err := c.ReadMessage()
+		if err != nil {
+			log.Println("read error:", err)
+			break
+		}
+
+		log.Printf("recv: %s", message)
+
+		saver := func(message []byte) {
+			var aX, aY, aZ, gX, gY, gZ float32
+			values := strings.Split(string(message), ",")
+
+			if len(values) != 6 {
+				log.Println("Not enough data")
+				return
+			}
+
+			aX = stringToFloat(values[0])
+			aY = stringToFloat(values[1])
+			aZ = stringToFloat(values[2])
+			gX = stringToFloat(values[3])
+			gY = stringToFloat(values[4])
+			gZ = stringToFloat(values[5])
+
+			var storage SQLiteStorage
+			storage.Initialize(os.Getenv("SQLDBPATH"))
+
+			err = storage.SaveData(aX, aY, aZ, gX, gY, gZ)
+			if err != nil {
+				log.Println("db write error:", err)
+				return
+			}
+		}
+
+		saver(message)
+
+		err = c.WriteMessage(mt, message)
+		if err != nil {
+			log.Println("write error:", err)
+			break
+		}
+	}
+}
+
 func main() {
-	var storage SQLiteStorage
-	storage.Initialize(os.Getenv("SQLDBPATH"))
-
-	var api API
-	api.SetStorage(&storage)
-
-	e := echo.New()
-	RegisterHandlers(e, &api)
-
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", os.Getenv("PORT"))))
+	http.HandleFunc("/record", save)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", os.Getenv("PORT")), nil))
 }

@@ -12,7 +12,7 @@
             "program": "${fileDirname}",
             "env": {
                 "PORT":"9000",
-                "SQLDBPATH":"/data/aictivity.db"
+                "SQLDBPATH":"aictivity.db"
             },
             "args": []
         }
